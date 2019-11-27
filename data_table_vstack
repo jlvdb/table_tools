@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+import sys
+
+from astropy.table import vstack
+from tools import load_table, stilts_available
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Vertically stack data tables.')
+    parser.add_argument(
+        '-i', '--input', nargs='*', required=True,
+        help='file paths of input data tables, must have the same data format')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='topcat-stilts (if available) format specifier of the input '
+             'tables, otherwise astropy.table format specifier '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--astropy', action='store_true', help='force using astropy.table')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='topcat-stilts (if available) format specifier of the output '
+             'table, otherwise astropy.table format specifier '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    if args.astropy:
+        stilts_command = ""
+    else:
+        stilts_command = stilts_available()
+
+    # if STILTS is avialable, use tcat to stack the tables
+    if len(stilts_command) > 0:
+        cmd = stilts_command.split()
+        cmd.extend(["tcat", "ifmt=%s" % args.i_format])
+        # specify input paths and table formats
+        for i, arg in enumerate(args.input, 1):
+            print("selected input table: %s" % arg)
+            cmd.append("in=%s" % arg)
+        # specify output path and table formats
+        cmd.append("ofmt=%s" % args.o_format)
+        cmd.append("out=%s" % args.output)
+        print("append the table data")
+        print("write table to: %s" % args.output)
+        subprocess.call(cmd)
+
+    # use astropy.table.Table as fallback (slower)
+    else:
+        # load tables
+        tables = []
+        ncols = -1
+        for path in args.input:
+            tables.append(load_table(path, args.i_format))
+            # check whether the number of columns match
+            if ncols == -1:
+                ncols = len(tables[-1].colnames)
+            elif len(tables[-1].colnames) != ncols:
+                sys.exit(
+                    "ERROR: Column count mismatch (%d != %d)" % (
+                        len(tables[-1].colnames), ncols))
+        # append the tables
+        print("append the table data")
+        master_table = vstack(tables)
+        # write to specified output path
+        print("write table to: %s" % args.output)
+        master_table.write(args.output, format=args.o_format, overwrite=True)

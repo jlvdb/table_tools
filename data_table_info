@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+import os
+import argparse
+
+from tools import load_table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Display column summary of a data table.')
+    parser.add_argument(
+        'input', help='file path of input data table')
+    parser.add_argument(
+        "--i-format", default='fits',
+        help='astropy.table format specifier of the input table')
+    args = parser.parse_args()
+
+    # load tables and print information
+    table = load_table(args.input, args.i_format)
+    print(table.info)

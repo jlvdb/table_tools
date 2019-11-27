@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import os
+import argparse
+from astropy.table import Table, unique, vstack
+
+from tools import load_table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Create a new table from entries of input tables keeping '
+                    'only unique objects (no repetion of multiple corrences).')
+    parser.add_argument(
+        '-i', '--input', nargs='*', required=True,
+        help='file paths of input data tables, must have the same data format')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of the input tables')
+    parser.add_argument(
+        '--id', required=True, help='object indetifier column name')
+    parser.add_argument(
+        '--id-sort', action='store_true',
+        help='sort the table by the object indetifier column')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    # load tables
+    tables = []
+    for cat in args.input:
+        tables.append(load_table(cat, args.i_format, [args.id]))
+
+    print("stack the tables and remove object specifiers")
+    table = vstack(tables)
+    len_original = len(table)
+    table = unique(table, args.id)
+    if args.id_sort:
+        table.sort(args.id)
+    print("kept unique objects: %i of %i" % (len(table), len_original))
+
+    # write to specified output path
+    print("write table to: %s" % args.output)
+    table.write(args.output, format=args.o_format, overwrite=True)

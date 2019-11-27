@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import os
+import argparse
+
+from astropy.table import Table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Print the number of columns or rows of a data table.')
+    parser.add_argument(
+        'input', help='file path of input data table')
+    parser.add_argument(
+        "--i-format", default='fits',
+        help='astropy.table format specifier of the input table')
+    parser.add_argument(
+        "-c", action='store_true',
+        help='print the number of columns instead of rows')
+    args = parser.parse_args()
+
+    # load tables and print information
+    table = Table.read(args.input, format=args.i_format)
+    if args.c:
+        print(len(table.colnames))
+    else:
+        print(len(table))

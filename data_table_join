@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+import argparse
+import os
+
+import pandas as pd
+from astropy.table import Table, unique, vstack
+from tools import load_table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Join a set of data tables based on an index column '
+                    'keeping only rows with indices appearing in both tables.')
+    parser.add_argument(
+        '-i', '--input', nargs='*', required=True,
+        help='file paths of input data tables, must have the same data format')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of the input tables')
+    parser.add_argument(
+        '--id', required=True, help='object indetifier column name')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    # load tables
+    tables = []
+    for cat in args.input:
+        tables.append(load_table(cat, args.i_format, [args.id]))
+    # convert to pandas data frames
+    dfs = [t.to_pandas(index=args.id) for t in tables]
+
+    print("join the tables by index")
+    # join frames iteratively
+    joined_df = dfs.pop(0)
+    for df in dfs:
+        # "inner": keep only indices appearing in both frames
+        joined_df = joined_df.join(df, how="inner")
+    print("joined tables to %d rows and %d columns" % joined_df.shape)
+
+    # convert back to astropy.table.Table
+    table = Table.from_pandas(joined_df, index=True)
+
+    # write to specified output path
+    print("write table to: %s" % args.output)
+    table.write(args.output, format=args.o_format, overwrite=True)

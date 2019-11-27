@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import sys
+import os
+import argparse
+import pandas as pd
+
+from tools import load_table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Draw random rows without repetition from a data table '
+                    'and store them into a new table.')
+    parser.add_argument(
+        '-i', '--input', required=True, help='file path of input data table')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of the input table')
+    parser.add_argument(
+        '-s', '--selection', required=True,
+        help='fraction (if float 0.0 < s < 1.0) or total number '
+             '(if int s > 1) of samples to draw form the table without '
+             'repetition')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    # try to convert the number/fraction of samples to draw
+    try:  # test if int and correct range
+        selection = int(args.selection)
+        assert(selection > 1)
+    except ValueError:
+        try:  # test if float and correct range
+            selection = float(args.selection)
+            assert(0.0 < selection < 1.0)
+        except ValueError:
+            sys.exit(
+                "ERROR: invalid selection '%s', must be either int or float" %
+                args.selection)
+        except AssertionError:
+            sys.exit("ERROR: if selection is a float it must be 0.0 < s < 1.0")
+    except AssertionError:
+        sys.exit("ERROR: if selection is an integeter it must be Ns > 1")
+
+    table = load_table(args.input, args.i_format)
+
+    # this is not very efficient but foolproof
+    n_total = len(table)
+    print("sampling from %d input rows" % n_total)
+    # create an pandas.DataFrame of the row indices
+    idx_list = pd.DataFrame({"i": range(n_total)})
+    if type(selection) is int:
+        idx_draw = idx_list.sample(selection)
+    else:
+        idx_draw = idx_list.sample(frac=selection)
+    idx_numpy = idx_draw.to_numpy().flatten()
+    idx_numpy.sort()  # reinstate the original order
+    table_selection = table[idx_numpy]  # mask the table entries
+    print("down to %d output rows" % len(table_selection))
+
+    # write to specified output path
+    print("write table to: %s" % args.output)
+    table_selection.write(args.output, format=args.o_format, overwrite=True)

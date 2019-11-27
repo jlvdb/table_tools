@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import sys
+import os
+import argparse
+
+from tools import load_table
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Convert data tables between different formats supported '
+                    'by astropy.table.')
+    parser.add_argument(
+        '-i', '--input', required=True, help='file path of input data table')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of the input table')
+    parser.add_argument(
+        '--header',
+        help='path to file containting header data if not supplied by input '
+             'table, column names are supplied line by line and must match '
+             'table shape')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format', required=True,
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    table = load_table(args.input, args.i_format)
+
+    # add header data
+    header = args.header
+    if header is not None:
+        print("adding header data from: %s" % header)
+        if not os.path.exists(header):
+            sys.exit("ERROR: header file not found: " + header)
+        with open(header) as f:
+            colnames = [line.strip() for line in f.readlines()]
+        if len(colnames) != len(table.colnames):
+            sys.exit("ERROR: header file does not match table columns")
+        for i, name in enumerate(colnames):
+            table.rename_column(table.colnames[i], name)
+
+    # write to specified output path
+    print("write table to: %s" % args.output)
+    table.write(args.output, format=args.o_format, overwrite=True)
