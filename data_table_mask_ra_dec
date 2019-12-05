@@ -55,11 +55,9 @@ if __name__ == "__main__":
         (dec_data >= DECmin) & (dec_data <= DECmax))
     if np.count_nonzero(mask) == 0:
         sys.exit("ERROR: no data found within RA/DEC limits")
-    else:
-        idx_list = np.arange(len(ra_data))[np.logical_not(mask)]
-        table.remove_rows(idx_list)
-        # write to specified output path
-        print("removed %d / %d rows" % (
-            len(ra_data) - np.count_nonzero(mask), len(ra_data)))
-        print("write table to: %s" % args.output)
-        table.write(args.output, format=args.o_format, overwrite=True)
+    masked_table = table[mask]
+    # write to specified output path
+    print(
+        "removed %d / %d rows" % (len(table) - len(masked_table), len(table)))
+    print("write table to: %s" % args.output)
+    masked_table.write(args.output, format=args.o_format, overwrite=True)
