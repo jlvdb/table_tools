@@ -63,3 +63,24 @@ def load_table(fpath, format, check_columns=[], tabinfo=""):
         if col not in table.colnames:
             sys.exit("ERROR: table does not contain column '%s'" % col)
     return table
+
+
+def read_pointing_file(fpath):
+    print("load pointing file: %s" % fpath)
+    pointings = []
+    with open(fpath) as f:
+        for n, rawline in enumerate(f, 1):
+            if len(rawline.strip()) == 0:
+                continue
+            try:
+                # get the RA-DEC bounds
+                line = rawline.strip()
+                pname, ra_decs = line.split(None, 1)
+                RAmin, RAmax, DECmin, DECmax = [
+                    float(s) for s in ra_decs.split()]
+                pointings.append((pname, RAmin, RAmax, DECmin, DECmax))
+            except (ValueError, IndexError):
+                sys.exit(
+                    ("ERROR: invalid format in line %d, " % n) +
+                    "expected: name RAmin RAmax DECmin DECmax (in degrees)")
+    return pointings
