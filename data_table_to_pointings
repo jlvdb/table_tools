@@ -8,7 +8,7 @@ import numpy as np
 import stomp
 from astropy.io import fits as pyfits
 
-from tools import load_table, read_pointing_file
+from tools import load_table, read_pointing_file, astropy_auto_extension
 
 
 if __name__ == "__main__":
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         help='minimum number of objects a pointing must contain in order to '
              'not be discarded')
     parser.add_argument(
-        '-o', 'output', required=True,
+        '-o', '--output', required=True,
         help='folder where the pointing data catalogues are stored '
              '(WARNING: existing contents will be erased!)')
     parser.add_argument(
@@ -47,10 +47,10 @@ if __name__ == "__main__":
     # create output folder
     if os.path.exists(args.output):
         shutil.rmtree(args.output)
-    os.mkdirs(args.output)
+    os.mkdir(args.output)
 
     # read the pointing defining file
-    pointings = read_pointing_file(args.pointing_file)
+    pointings = read_pointing_file(args.pointings_file)
 
     table = load_table(args.input, args.i_format, [args.ra, args.dec])
     ra_data = table[args.ra]
@@ -62,9 +62,14 @@ if __name__ == "__main__":
         mask = (  # mask data to bounds
             (ra_data >= RAmin) & (ra_data < RAmax) &
             (dec_data >= DECmin) & (dec_data < DECmax))
-        if np.count_nonzero(mask) <= args.object_limit:
+        n_data = np.count_nonzero(mask)
+        if n_data <= args.object_limit:
             print(
-                "WARNING: pointing %s rejected: insufficient objects" % pname)
+                "WARNING: pointing %s rejected: insufficient objects (%d)" % (
+                    pname, n_data))
             continue
         pointing_table = table[mask]
-        pointing_table.write(args.output, format=args.o_format, overwrite=True)
+        table_path = os.path.join(
+            args.output, "%s.%s" % (
+                pname, astropy_auto_extension(args.o_format)))
+        pointing_table.write(table_path, format=args.o_format, overwrite=True)

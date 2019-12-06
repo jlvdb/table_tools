@@ -101,3 +101,27 @@ def read_pointing_file(fpath):
                     ("ERROR: invalid format in line %d, " % n) +
                     "expected: name RAmin RAmax DECmin DECmax (in degrees)")
     return pointings
+
+
+def astropy_auto_extension(astropy_format_key):
+    """
+    Automatically find a good file extension name for a given
+    astropy.table.Table format specifier.
+
+    Parameters
+    ----------
+    astropy_format_key : string
+        astropy.table.Table format specifier.
+
+    Returns
+    -------
+    ext : string
+        Proposed file extension name.
+    """
+    if "tex" in astropy_format_key:
+        ext = "tex"
+    elif "." in astropy_format_key:
+        ext = astropy_format_key.split(".")[0]
+    else:
+        ext = astropy_format_key
+    return ext
