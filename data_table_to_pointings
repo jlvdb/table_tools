@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--dec', required=True, help='fits column name of DEC')
     parser.add_argument(
-        '--object-limit', type=int, default=0,
+        '--object-limit', type=int, default=1,
         help='minimum number of objects a pointing must contain in order to '
              'not be discarded')
     parser.add_argument(
