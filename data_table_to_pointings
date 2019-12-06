@@ -15,8 +15,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='Split a survey data sample into pointing samples '
-                    'defined by RA/DEC cuts from a pointing file or by '
-                    'masking using pointing STOMP maps.')
+                    'defined by RA/DEC cuts from a pointing file.')
     parser.add_argument(
         '-i', '--input', required=True, help='file path of input data table')
     parser.add_argument(
