@@ -66,6 +66,23 @@ def load_table(fpath, format, check_columns=[], tabinfo=""):
 
 
 def read_pointing_file(fpath):
+    """
+    Read a file containing a list of pointings. These must be provided in five
+    columns: pointing_name RAmin RAmax DECmin DECmax
+    All angles are expected in degrees.
+
+    Parameters
+    ----------
+    fpath : string
+        Input file path to read.
+
+    Returns
+    -------
+    table : list of lists
+        List of pointings with numerical values converted float. Each item
+        has the same input format as the input file:
+        pointing_name RAmin RAmax DECmin DECmax
+    """
     print("load pointing file: %s" % fpath)
     pointings = []
     with open(fpath) as f:
