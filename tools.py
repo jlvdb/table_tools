@@ -63,3 +63,65 @@ def load_table(fpath, format, check_columns=[], tabinfo=""):
         if col not in table.colnames:
             sys.exit("ERROR: table does not contain column '%s'" % col)
     return table
+
+
+def read_pointing_file(fpath):
+    """
+    Read a file containing a list of pointings. These must be provided in five
+    columns: pointing_name RAmin RAmax DECmin DECmax
+    All angles are expected in degrees.
+
+    Parameters
+    ----------
+    fpath : string
+        Input file path to read.
+
+    Returns
+    -------
+    table : list of lists
+        List of pointings with numerical values converted float. Each item
+        has the same input format as the input file:
+        pointing_name RAmin RAmax DECmin DECmax
+    """
+    print("load pointing file: %s" % fpath)
+    pointings = []
+    with open(fpath) as f:
+        for n, rawline in enumerate(f, 1):
+            if len(rawline.strip()) == 0:
+                continue
+            try:
+                # get the RA-DEC bounds
+                line = rawline.strip()
+                pname, ra_decs = line.split(None, 1)
+                RAmin, RAmax, DECmin, DECmax = [
+                    float(s) for s in ra_decs.split()]
+                pointings.append((pname, RAmin, RAmax, DECmin, DECmax))
+            except (ValueError, IndexError):
+                sys.exit(
+                    ("ERROR: invalid format in line %d, " % n) +
+                    "expected: name RAmin RAmax DECmin DECmax (in degrees)")
+    return pointings
+
+
+def astropy_auto_extension(astropy_format_key):
+    """
+    Automatically find a good file extension name for a given
+    astropy.table.Table format specifier.
+
+    Parameters
+    ----------
+    astropy_format_key : string
+        astropy.table.Table format specifier.
+
+    Returns
+    -------
+    ext : string
+        Proposed file extension name.
+    """
+    if "tex" in astropy_format_key:
+        ext = "tex"
+    elif "." in astropy_format_key:
+        ext = astropy_format_key.split(".")[0]
+    else:
+        ext = astropy_format_key
+    return ext

@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import shutil
+import sys
+
+import numpy as np
+import stomp
+from astropy.io import fits as pyfits
+
+from tools import load_table, read_pointing_file, astropy_auto_extension
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Split a survey data sample into pointing samples '
+                    'defined by RA/DEC cuts from a pointing file or by '
+                    'masking using pointing STOMP maps.')
+    parser.add_argument(
+        '-i', '--input', required=True, help='file path of input data table')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of input table')
+    parser.add_argument(
+        '-p', '--pointings-file', required=True,
+        help='file that provides pointing RA-DEC bounds in 5 columns: '
+             'pointing name, RAmin, RAmax, DECmin, DECmax')
+    parser.add_argument(
+        '--ra', required=True, help='fits column name of RA')
+    parser.add_argument(
+        '--dec', required=True, help='fits column name of DEC')
+    parser.add_argument(
+        '--object-limit', type=int, default=0,
+        help='minimum number of objects a pointing must contain in order to '
+             'not be discarded')
+    parser.add_argument(
+        '-o', '--output', required=True,
+        help='folder where the pointing data catalogues are stored '
+             '(WARNING: existing contents will be erased!)')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    # create output folder
+    if os.path.exists(args.output):
+        shutil.rmtree(args.output)
+    os.mkdir(args.output)
+
+    # read the pointing defining file
+    pointings = read_pointing_file(args.pointings_file)
+
+    table = load_table(args.input, args.i_format, [args.ra, args.dec])
+    ra_data = table[args.ra]
+    dec_data = table[args.dec]
+
+    # mask the table to each of the pointings
+    print("write pointing catalogues to: %s" % args.output)
+    for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings, 1):
+        mask = (  # mask data to bounds
+            (ra_data >= RAmin) & (ra_data < RAmax) &
+            (dec_data >= DECmin) & (dec_data < DECmax))
+        n_data = np.count_nonzero(mask)
+        if n_data <= args.object_limit:
+            print(
+                "WARNING: pointing %s rejected: insufficient objects (%d)" % (
+                    pname, n_data))
+            continue
+        pointing_table = table[mask]
+        table_path = os.path.join(
+            args.output, "%s.%s" % (
+                pname, astropy_auto_extension(args.o_format)))
+        pointing_table.write(table_path, format=args.o_format, overwrite=True)

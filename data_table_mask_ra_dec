@@ -18,7 +18,7 @@ if __name__ == "__main__":
         help='astropy.table format specifier of the input tables ')
     parser.add_argument(
         '-b', '--bounds', nargs=4, type=float, required=True,
-        help='bounds of polygon in degrees: DEC_min DEC_max RA_min RA_max')
+        help='bounds of polygon in degrees: RA_min RA_max DEC_min DEC_max')
     parser.add_argument(
         '--ra', required=True, help='fits column name of RA')
     parser.add_argument(
@@ -31,7 +31,7 @@ if __name__ == "__main__":
              '(default: %(default)s)')
     args = parser.parse_args()
 
-    DECmin, DECmax, RAmin, RAmax = args.bounds
+    RAmin, RAmax, DECmin, DECmax = args.bounds
     # check input bounds
     if not all(-90.0 <= dec <= 90.0 for dec in (DECmin, DECmax)):
         parser.error("DEC_min and DEC_max must be between -90 and 90 degrees")
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # apply filter rule
     print(
         "mask data to bounds with RA: %07.3f-%07.3f and DEC: %+7.3f-%+7.3f " %
-            (RAmin, RAmax, DECmin, DECmax))
+        (RAmin, RAmax, DECmin, DECmax))
     # collect RA/DEC from the table
     ra_data = table[args.ra].data
     dec_data = table[args.dec].data
@@ -55,11 +55,9 @@ if __name__ == "__main__":
         (dec_data >= DECmin) & (dec_data <= DECmax))
     if np.count_nonzero(mask) == 0:
         sys.exit("ERROR: no data found within RA/DEC limits")
-    else:
-        idx_list = np.arange(len(ra_data))[np.logical_not(mask)]
-        table.remove_rows(idx_list)
-        # write to specified output path
-        print("removed %d / %d rows" % (
-            len(ra_data) - np.count_nonzero(mask), len(ra_data)))
-        print("write table to: %s" % args.output)
-        table.write(args.output, format=args.o_format, overwrite=True)
+    masked_table = table[mask]
+    # write to specified output path
+    print(
+        "removed %d / %d rows" % (len(table) - len(masked_table), len(table)))
+    print("write table to: %s" % args.output)
+    masked_table.write(args.output, format=args.o_format, overwrite=True)
