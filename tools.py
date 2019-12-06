@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 
+import numpy as np
 from astropy.table import Table
 
 
@@ -125,3 +126,52 @@ def astropy_auto_extension(astropy_format_key):
     else:
         ext = astropy_format_key
     return ext
+
+
+def pointings_multi_matches(table, pointing_masks, o_folder, o_format):
+    global_mask = pointing_masks.sum(axis=0)
+    mask_multi_match = global_mask > 1
+    n_multi_match = np.count_nonzero(mask_multi_match)
+    if n_multi_match > 0:
+        print(
+            ("WARNING: there are %d objects assigned to " % n_multi_match) +
+            "multiple pointings")
+        # create a table for inspection
+        multi_path = os.path.join(
+            o_folder, "multi_match.%s" % astropy_auto_extension(o_format))
+        print("writing remaining objects to: %s" % multi_path)
+        multi_table = table[mask_multi_match]
+        multi_table.write(multi_path, format=o_format, overwrite=True)
+
+
+def pointings_no_matches(table, pointing_masks, o_folder, o_format):
+    global_mask = pointing_masks.sum(axis=0)
+    mask_no_match = global_mask == 0
+    n_no_match = np.count_nonzero(mask_no_match)
+    if n_no_match > 0:
+        print("WARNING: %d objects have no matching pointing" % n_no_match)
+        # create a table for inspection
+        remainder_path = os.path.join(
+            o_folder, "remainder.%s" % astropy_auto_extension(o_format))
+        print("writing remaining objects to: %s" % remainder_path)
+        remainder_table = table[mask_no_match]
+        remainder_table.write(
+            remainder_path, format=o_format, overwrite=True)
+
+
+def pointings_write_tables(
+        table, pointing_masks, pointing_names,
+        o_folder, o_format, min_objects):
+    print("writing pointing catalogues to: %s" % o_folder)
+    for i, mask in enumerate(pointing_masks):
+        n_data = np.count_nonzero(mask)
+        if n_data <= min_objects:
+            print(
+                ("WARNING: pointing %s rejected: " % pointing_names[i]) +
+                ("insufficient objects (%d)" % n_data))
+            continue
+        pointing_table = table[mask]
+        table_path = os.path.join(
+            o_folder, "%s.%s" % (
+                pointing_names[i], astropy_auto_extension(o_format)))
+        pointing_table.write(table_path, format=o_format, overwrite=True)

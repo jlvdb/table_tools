@@ -2,13 +2,12 @@
 import argparse
 import os
 import shutil
-import sys
 
 import numpy as np
-import stomp
-from astropy.io import fits as pyfits
 
-from tools import load_table, read_pointing_file, astropy_auto_extension
+from tools import (
+    load_table, read_pointing_file,
+    pointings_multi_matches, pointings_no_matches, pointings_write_tables)
 
 
 if __name__ == "__main__":
@@ -56,19 +55,27 @@ if __name__ == "__main__":
     dec_data = table[args.dec]
 
     # mask the table to each of the pointings
-    print("write pointing catalogues to: %s" % args.output)
+    ra_data = table[args.ra]
+    dec_data = table[args.dec]
+    pointing_names = sorted([
+        p[0] for p in pointings])  # must keep these in order
+    print("splitting data into pointings")
+    pointing_mask_list = []
     for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings, 1):
-        mask = (  # mask data to bounds
+        pointing_mask_list.append((  # mask data to bounds
             (ra_data >= RAmin) & (ra_data < RAmax) &
-            (dec_data >= DECmin) & (dec_data < DECmax))
-        n_data = np.count_nonzero(mask)
-        if n_data <= args.object_limit:
-            print(
-                "WARNING: pointing %s rejected: insufficient objects (%d)" % (
-                    pname, n_data))
-            continue
-        pointing_table = table[mask]
-        table_path = os.path.join(
-            args.output, "%s.%s" % (
-                pname, astropy_auto_extension(args.o_format)))
-        pointing_table.write(table_path, format=args.o_format, overwrite=True)
+            (dec_data >= DECmin) & (dec_data < DECmax)))
+    # stack the boolean masks
+    pointing_masks = np.empty(
+        (len(pointing_mask_list), len(table)), dtype="bool")
+    for i, mask in enumerate(pointing_mask_list):
+        pointing_masks[i] = mask
+
+    # compute global mask and check if object have multiple matches
+    pointings_multi_matches(table, pointing_masks, args.output, args.o_format)
+    # report the remainder that was not covered by any of the pointings
+    pointings_no_matches(table, pointing_masks, args.output, args.o_format)
+    # write the remaining data tables if they are not empty
+    pointings_write_tables(
+        table, pointing_masks, pointing_names, args.output, args.o_format,
+        args.object_limit)
