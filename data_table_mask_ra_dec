@@ -37,22 +37,25 @@ if __name__ == "__main__":
         parser.error("DEC_min and DEC_max must be between -90 and 90 degrees")
     if not all(0.0 <= ra <= 360.0 for ra in (RAmin, RAmax)):
         parser.error("RA_min and RA_max must be between 0 and 360 degrees")
-    if RAmax <= RAmin:
-        parser.error("RA_min must be lower than RA_max")
     if DECmax <= DECmin:
         parser.error("DEC_min must be lower than DEC_max")
     table = load_table(args.input, args.i_format, [args.ra, args.dec])
 
     # apply filter rule
     print(
-        "mask data to bounds with RA: %07.3f-%07.3f and DEC: %+7.3f-%+7.3f " %
-        (RAmin, RAmax, DECmin, DECmax))
+        ("mask data to bounds with RA: %011.7f-%011.7f " % (RAmin, RAmax)) +
+        ("and DEC: %0+11.7f-%0+11.7f " % (DECmin, DECmax)))
     # collect RA/DEC from the table
     ra_data = table[args.ra].data
     dec_data = table[args.dec].data
-    mask = (  # mask data to bounds
-        (ra_data >= RAmin) & (ra_data <= RAmax) &
-        (dec_data >= DECmin) & (dec_data <= DECmax))
+    if RAmax >= RAmin:
+        mask = (  # mask data to bounds
+            (ra_data >= RAmin) & (ra_data < RAmax) &
+            (dec_data >= DECmin) & (dec_data < DECmax))
+    else:
+        mask = (  # mask data to bounds
+            (ra_data >= RAmin) | (ra_data < RAmax) &
+            (dec_data >= DECmin) & (dec_data < DECmax))
     if np.count_nonzero(mask) == 0:
         sys.exit("ERROR: no data found within RA/DEC limits")
     masked_table = table[mask]

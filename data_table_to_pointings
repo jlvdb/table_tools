@@ -62,9 +62,14 @@ if __name__ == "__main__":
     print("splitting data into pointings")
     pointing_mask_list = []
     for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings, 1):
-        pointing_mask_list.append((  # mask data to bounds
-            (ra_data >= RAmin) & (ra_data < RAmax) &
-            (dec_data >= DECmin) & (dec_data < DECmax)))
+        if RAmax >= RAmin:
+            pointing_mask_list.append((  # mask data to bounds
+                (ra_data >= RAmin) & (ra_data < RAmax) &
+                (dec_data >= DECmin) & (dec_data < DECmax)))
+        else:
+            pointing_mask_list.append((  # mask data to bounds
+                (ra_data >= RAmin) | (ra_data < RAmax) &
+                (dec_data >= DECmin) & (dec_data < DECmax)))
     # stack the boolean masks
     pointing_masks = np.empty(
         (len(pointing_mask_list), len(table)), dtype="bool")
