@@ -5,7 +5,7 @@ import shutil
 
 import numpy as np
 
-from tools import (
+from table_tools import (
     load_table, read_pointing_file,
     pointings_multi_matches, pointings_no_matches, pointings_write_tables)
 

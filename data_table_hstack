@@ -5,7 +5,8 @@ import subprocess
 import sys
 
 from astropy.table import hstack
-from tools import load_table, stilts_available
+
+from table_tools import load_table, stilts_available
 
 
 if __name__ == "__main__":
