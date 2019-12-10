@@ -4,7 +4,7 @@ import sys
 import numpy as np
 
 
-def read_pointing_file(fpath):
+def read_pointing_file(fpath, verbose=True):
     """
     Read a file containing a list of pointings. These must be provided in five
     columns: pointing_name RAmin RAmax DECmin DECmax
@@ -14,6 +14,8 @@ def read_pointing_file(fpath):
     ----------
     fpath : string
         Input file path to read.
+    verbose : boolean
+        Whether to display the loaded file path.
 
     Returns
     -------
@@ -22,7 +24,8 @@ def read_pointing_file(fpath):
         has the same input format as the input file:
         pointing_name RAmin RAmax DECmin DECmax
     """
-    print("load pointing file: %s" % fpath)
+    if verbose:
+        print("load pointing file: %s" % fpath)
     pointings = []
     with open(fpath) as f:
         for n, rawline in enumerate(f, 1):
