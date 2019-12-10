@@ -1,6 +1,45 @@
 import os
+import sys
 
 import numpy as np
+
+
+def read_pointing_file(fpath):
+    """
+    Read a file containing a list of pointings. These must be provided in five
+    columns: pointing_name RAmin RAmax DECmin DECmax
+    All angles are expected in degrees.
+
+    Parameters
+    ----------
+    fpath : string
+        Input file path to read.
+
+    Returns
+    -------
+    table : list of lists
+        List of pointings with numerical values converted float. Each item
+        has the same input format as the input file:
+        pointing_name RAmin RAmax DECmin DECmax
+    """
+    print("load pointing file: %s" % fpath)
+    pointings = []
+    with open(fpath) as f:
+        for n, rawline in enumerate(f, 1):
+            if len(rawline.strip()) == 0:
+                continue
+            try:
+                # get the RA-DEC bounds
+                line = rawline.strip()
+                pname, ra_decs = line.split(None, 1)
+                RAmin, RAmax, DECmin, DECmax = [
+                    float(s) for s in ra_decs.split()]
+                pointings.append((pname, RAmin, RAmax, DECmin, DECmax))
+            except (ValueError, IndexError):
+                sys.exit(
+                    ("ERROR: invalid format in line %d, " % n) +
+                    "expected: name RAmin RAmax DECmin DECmax (in degrees)")
+    return pointings
 
 
 def pointings_multi_matches(table, pointing_masks, o_folder, o_format):
