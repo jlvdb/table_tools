@@ -33,6 +33,10 @@ if __name__ == "__main__":
         help='minimum number of objects a pointing must contain in order to '
              'not be discarded')
     parser.add_argument(
+        '--remainder', action='store_true',
+        help='whether to write a table with objects that do not match any '
+             'pointing')
+    parser.add_argument(
         '-o', '--output', required=True,
         help='folder where the pointing data catalogues are stored '
              '(WARNING: existing contents will be erased!)')
@@ -49,6 +53,7 @@ if __name__ == "__main__":
 
     # read the pointing defining file
     pointings = read_pointing_file(args.pointings_file)
+    pointing_names = [p[0] for p in pointings]
 
     table = load_table(args.input, args.i_format, [args.ra, args.dec])
     ra_data = table[args.ra]
@@ -57,8 +62,6 @@ if __name__ == "__main__":
     # mask the table to each of the pointings
     ra_data = table[args.ra]
     dec_data = table[args.dec]
-    pointing_names = sorted([
-        p[0] for p in pointings])  # must keep these in order
     print("splitting data into pointings")
     pointing_mask_list = []
     for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings, 1):
@@ -79,7 +82,8 @@ if __name__ == "__main__":
     # compute global mask and check if object have multiple matches
     pointings_multi_matches(table, pointing_masks, args.output, args.o_format)
     # report the remainder that was not covered by any of the pointings
-    pointings_no_matches(table, pointing_masks, args.output, args.o_format)
+    pointings_no_matches(
+        table, pointing_masks, args.output, args.o_format, args.remainder)
     # write the remaining data tables if they are not empty
     pointings_write_tables(
         table, pointing_masks, pointing_names, args.output, args.o_format,

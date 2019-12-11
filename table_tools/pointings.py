@@ -3,6 +3,8 @@ import sys
 
 import numpy as np
 
+from .utils import astropy_auto_extension
+
 
 def read_pointing_file(fpath, verbose=True):
     """
@@ -76,7 +78,7 @@ def pointings_multi_matches(table, pointing_masks, o_folder, o_format):
         multi_table.write(multi_path, format=o_format, overwrite=True)
 
 
-def pointings_no_matches(table, pointing_masks, o_folder, o_format):
+def pointings_no_matches(table, pointing_masks, o_folder, o_format, write):
     """
     Identify objects that are assigend to no pointing.
 
@@ -91,19 +93,22 @@ def pointings_no_matches(table, pointing_masks, o_folder, o_format):
         Path to folder in which all output is collected.
     o_format : string
         astropy.table.Table format specifier.
+    write : boolean
+        whether to write out the remainder table
     """
     global_mask = pointing_masks.sum(axis=0)
     mask_no_match = global_mask == 0  # no match
     n_no_match = np.count_nonzero(mask_no_match)
     if n_no_match > 0:
         print("WARNING: %d objects have no matching pointing" % n_no_match)
-        # create a table for inspection
-        remainder_path = os.path.join(
-            o_folder, "remainder.%s" % astropy_auto_extension(o_format))
-        print("writing remaining objects to: %s" % remainder_path)
-        remainder_table = table[mask_no_match]
-        remainder_table.write(
-            remainder_path, format=o_format, overwrite=True)
+        if write:
+            # create a table for inspection
+            remainder_path = os.path.join(
+                o_folder, "remainder.%s" % astropy_auto_extension(o_format))
+            print("writing remaining objects to: %s" % remainder_path)
+            remainder_table = table[mask_no_match]
+            remainder_table.write(
+                remainder_path, format=o_format, overwrite=True)
 
 
 def pointings_write_tables(
