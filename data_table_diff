@@ -35,13 +35,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # load data
-    table1 = load_table(args.input, args.i_format, [args.id], tabinfo=" (1)")
-    table2 = load_table(args.diff, args.d_format, [args.id], tabinfo=" (2)")
+    table1 = load_table(args.input, args.i_format, [args.keys], tabinfo=" (1)")
+    table2 = load_table(args.diff, args.d_format, [args.keys], tabinfo=" (2)")
 
     print(
         "only keep entries from column '%s' in (1) which do not exist in (2)" %
-        args.id)
-    table = setdiff(table1, table2, keys=[args.id])
+        args.keys)
+    table = setdiff(table1, table2, keys=[args.keys])
 
     # write to specified output path
     print("write table to: %s" % args.output)
