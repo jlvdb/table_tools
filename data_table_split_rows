@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+import sys
+from math import log10
+
+from table_tools import load_table, stilts_available
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Split a table into a set of tables containing contiguous '
+                    'row subsets of similar size.')
+    parser.add_argument(
+        '-i', '--input', required=True,
+        help='file paths of input data tables, must have the same data format')
+    parser.add_argument(
+        '-n', '--n-splits', required=True, type=int,
+        help='number of row subsets to create')
+    parser.add_argument(
+        '-o', '--output', required=True,
+        help='file path of output table, an running index for each row subset '
+             'will be inserted between the file name and the file extension')
+    parser.add_argument(
+        '-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+
+    stilts_command = stilts_available()
+
+    # count the number of rows with stilts
+    cmd = stilts_command.split()
+    cmd.extend(["tpipe", "in=%s" % args.input, "omode=count"])
+    try:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        assert(proc.returncode == 0)
+    except AssertionError:
+        print(stderr.decode("utf-8"))
+        sys.exit("ERROR: could not read input table")
+    # format: columns: NCOLS   rows: NROWS
+    text1, n_cols, text2, n_rows = stdout.decode("utf-8").split()
+    n_cols, n_rows = int(n_cols), int(n_rows)
+
+    # determine splits
+    n_per_split = max(1.0, n_rows / args.n_splits)
+    n = 0.0
+    split_idx = []
+    while n < n_rows:
+        split_idx.append(int(n + 1))
+        n += n_per_split
+    split_idx.append(n_rows + 1)
+
+    # split the table into chunks
+    n_digits = int(log10(n_rows)) + 1
+    print("writing output to: %s" % "_*".join(os.path.splitext(args.output)))
+    for n in range(len(split_idx) - 1):
+        row_start = split_idx[n]
+        row_end = split_idx[n + 1] - 1
+        if args.verbose:
+            print(
+                "writing row subset %s to %s" % (
+                    str(row_start).zfill(n_digits),
+                    str(row_end).zfill(n_digits)))
+        outname = ("_%04d" % n).join(os.path.splitext(args.output))
+        cmd = stilts_command.split()
+        cmd.extend(["tpipe", "in=%s" % args.input])
+        cmd.extend(["cmd='rowrange", str(row_start), str(row_end) + "'"])
+        cmd.append("out=" + outname)
+        try:
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = proc.communicate()
+            assert(proc.returncode == 0)
+        except AssertionError:
+            print(stderr.decode("utf-8"))
+            sys.exit("ERROR: failed to write the output files")
