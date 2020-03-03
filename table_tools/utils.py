@@ -42,7 +42,7 @@ def read_footprint_file(fpath):
     return surveys
 
 
-def load_table(fpath, format, check_columns=[], tabinfo=""):
+def load_table(fpath, format, check_columns=[], tabinfo="", verbose=True):
     """
     Wrapper for astropy.table.Table to load tables of various formats and
     checking the existance of required columns. Exiting python if a column does
@@ -68,7 +68,8 @@ def load_table(fpath, format, check_columns=[], tabinfo=""):
     if not os.path.exists(fpath):
         sys.exit("ERROR: input file not found: " + fpath)
     # load table
-    print("load input table%s: %s" % (tabinfo, fpath))
+    if verbose:
+        print("load input table%s: %s" % (tabinfo, fpath))
     table = Table.read(fpath, format=format)
     # check columns
     for col in check_columns:
