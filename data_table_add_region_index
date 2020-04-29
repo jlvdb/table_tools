@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import shutil
+
+import numpy as np
+
+from table_tools import (
+    load_table, read_pointing_file,
+    pointings_multi_matches, pointings_no_matches, pointings_write_tables)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Split a survey data sample into pointing samples '
+                    'defined by RA/DEC cuts from a pointing file.')
+    parser.add_argument(
+        '-i', '--input', required=True, help='file path of input data table')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of input table')
+    parser.add_argument(
+        '-p', '--pointings-file', required=True,
+        help='file that provides pointing RA-DEC bounds in 5 columns: '
+             'pointing name, RAmin, RAmax, DECmin, DECmax')
+    parser.add_argument(
+        '--ra', required=True, help='fits column name of RA')
+    parser.add_argument(
+        '--dec', required=True, help='fits column name of DEC')
+    parser.add_argument(
+        '-o', '--output', required=True, help='file path of output table')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    args = parser.parse_args()
+
+    # read the pointing defining file
+    pointings = read_pointing_file(args.pointings_file)
+    pointing_names = [p[0] for p in pointings]
+
+    table = load_table(args.input, args.i_format, [args.ra, args.dec])
+    ra_data = table[args.ra]
+    dec_data = table[args.dec]
+    region_idx = np.full(len(table), -1, dtype=np.int16)
+
+    # mask the table to each of the pointings
+    ra_data = table[args.ra]
+    dec_data = table[args.dec]
+    print("splitting data into pointings")
+    for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings):
+        print(
+            "processing %4d / %4d: %-20s" % (n + 1, len(pointings), pname),
+            end="\r")
+        if RAmax >= RAmin:
+            pointing_mask = (  # mask data to bounds
+                (ra_data >= RAmin) & (ra_data < RAmax) &
+                (dec_data >= DECmin) & (dec_data < DECmax))
+        else:
+            pointing_mask = (  # mask data to bounds
+                (ra_data >= RAmin) | (ra_data < RAmax) &
+                (dec_data >= DECmin) & (dec_data < DECmax))
+        region_idx[pointing_mask] = n
+    print()
+    # write the output
+    table["region_idx"] = region_idx
+    table.write(args.output, format=args.o_format, overwrite=True)
