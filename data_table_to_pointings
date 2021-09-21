@@ -3,11 +3,12 @@ import argparse
 import os
 import shutil
 
+import astropandas as apd
 import numpy as np
 
 from table_tools import (
-    load_table, read_pointing_file,
-    pointings_multi_matches, pointings_no_matches, pointings_write_tables)
+    read_pointing_file, pointings_multi_matches, pointings_no_matches,
+    pointings_write_tables)
 
 
 if __name__ == "__main__":
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     pointings = read_pointing_file(args.pointings_file)
     pointing_names = [p[0] for p in pointings]
 
-    table = load_table(args.input, args.i_format, [args.ra, args.dec])
+    table = apd.read_auto(args.input, ext="." + args.i_format)
     ra_data = table[args.ra]
     dec_data = table[args.dec]
 

@@ -1,6 +1,7 @@
 import os
 import sys
 
+import astropandas as apd
 import numpy as np
 
 from .utils import astropy_auto_extension
@@ -75,7 +76,7 @@ def pointings_multi_matches(table, pointing_masks, o_folder, o_format):
             o_folder, "multi_match.%s" % astropy_auto_extension(o_format))
         print("writing remaining objects to: %s" % multi_path)
         multi_table = table[mask_multi_match]
-        multi_table.write(multi_path, format=o_format, overwrite=True)
+        apd.to_auto(multi_table, multi_path, ext="." + o_format)
 
 
 def pointings_no_matches(table, pointing_masks, o_folder, o_format, write):
@@ -107,8 +108,7 @@ def pointings_no_matches(table, pointing_masks, o_folder, o_format, write):
                 o_folder, "remainder.%s" % astropy_auto_extension(o_format))
             print("writing remaining objects to: %s" % remainder_path)
             remainder_table = table[mask_no_match]
-            remainder_table.write(
-                remainder_path, format=o_format, overwrite=True)
+            apd.to_auto(remainder_table, remainder_path, ext="." + o_format)
 
 
 def pointings_write_tables(
@@ -147,4 +147,4 @@ def pointings_write_tables(
         table_path = os.path.join(
             o_folder, "%s.%s" % (
                 pointing_names[i], astropy_auto_extension(o_format)))
-        pointing_table.write(table_path, format=o_format, overwrite=True)
+        apd.to_auto(pointing_table, table_path, ext="." + o_format)
