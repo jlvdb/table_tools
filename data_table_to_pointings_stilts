@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+import argparse
+import multiprocessing
+import os
+import shutil
+import subprocess
+
+import astropandas as apd
+import numpy as np
+import tqdm
+
+from table_tools import (
+    read_pointing_file, pointings_multi_matches, pointings_no_matches,
+    pointings_write_tables, stilts_available)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Split a survey data sample into pointing samples '
+                    'defined by RA/DEC cuts from a pointing file.')
+    parser.add_argument(
+        '-i', '--input', required=True, help='file path of input data table')
+    parser.add_argument(
+        '--i-format', default='fits',
+        help='astropy.table format specifier of input table')
+    parser.add_argument(
+        '-p', '--pointings-file', required=True,
+        help='file that provides pointing RA-DEC bounds in 5 columns: '
+             'pointing name, RAmin, RAmax, DECmin, DECmax')
+    parser.add_argument(
+        '--ra', required=True, help='fits column name of RA')
+    parser.add_argument(
+        '--dec', required=True, help='fits column name of DEC')
+    parser.add_argument(
+        '-o', '--output', required=True,
+        help='folder where the pointing data catalogues are stored '
+             '(WARNING: existing contents will be erased!)')
+    parser.add_argument(
+        '--o-format', default='fits',
+        help='astropy.table format specifier of the output table '
+             '(default: %(default)s)')
+    parser.add_argument(
+        '--threads', type=int, default=1,
+        help='number of parallel write jobs (only with --stilts, '
+             'default: %(default)s)')
+    parser.add_argument(
+        '--stilts', action='store_true',
+        help='use topcat stilts if avilable instead of python code, (faster '
+             'but less debugging output)')
+    parser.add_argument(
+        '--cache-dir',
+        help='copy input data to cache directory which allows fast access')
+    args = parser.parse_args()
+
+    # create output folder
+    if os.path.exists(args.output):
+        raise OSError("output folder exists: %s" % args.output)
+    os.mkdir(args.output)
+
+    # read the pointing defining file
+    pointings = read_pointing_file(args.pointings_file)
+    pointing_names = [p[0] for p in pointings]
+
+    try:
+        if args.cache_dir:
+            ramdisk_path = os.path.join(
+                args.cache_dir, os.path.basename(args.input))
+            print("copying to cache: {:}".format(ramdisk_path))
+            shutil.copy(args.input, ramdisk_path)
+            args.input = ramdisk_path
+        print("splitting data into pointings")
+        # build the list of stilts commands
+        commands = []
+        for n, (pname, RAmin, RAmax, DECmin, DECmax) in enumerate(pointings, 1):
+            pointing_path = os.path.join(args.output, "%s.fits" % pname)
+            cmd = [
+                "topcat", "-stilts", "tpipe",
+                "ifmt={:}".format(args.i_format), args.input,
+                'cmd=select "{ra:}>={ra_min:.6f} && {ra:}<{ra_max:.6f} && {dec:}>={dec_min:.6f} && {dec:}<{dec_max:.6f}"'.format(
+                    ra=args.ra, dec=args.dec, ra_min=RAmin, ra_max=RAmax, dec_min=DECmin, dec_max=DECmax),
+                "ofmt=fits", "out={:}".format(pointing_path)]
+            commands.append(cmd)
+        with multiprocessing.Pool(args.threads) as pool:
+            list(tqdm.tqdm(
+                pool.imap(subprocess.call, commands), total=len(commands)))
+    except Exception:
+        if args.cache_dir:
+            os.remove(ramdisk_path)
+            print("removed cached file: {:}".format(ramdisk_path))
