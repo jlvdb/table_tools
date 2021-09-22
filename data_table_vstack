@@ -39,16 +39,15 @@ if __name__ == "__main__":
 
     # if STILTS is avialable, use tcat to stack the tables
     if len(stilts_command) > 0:
+        print("append the data from {:d} tables".format(len(args.input)))
         cmd = stilts_command.split()
         cmd.extend(["tcat", "ifmt=%s" % args.i_format])
         # specify input paths and table formats
         for i, arg in enumerate(args.input, 1):
-            print("selected input table: %s" % arg)
             cmd.append("in=%s" % arg)
         # specify output path and table formats
         cmd.append("ofmt=%s" % args.o_format)
         cmd.append("out=%s" % args.output)
-        print("append the table data")
         print("write table to: %s" % args.output)
         subprocess.call(cmd)
 
