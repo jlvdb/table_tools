@@ -1,4 +1,4 @@
 numpy
 astropy
 pandas
-astropandas @ git+https://github.com/jlvdb/astropandas.git
+astropandas
